@@ -10,14 +10,14 @@ private:
     int time;        // 运行时间
 public:
     SafeSeq();
-    void addSeq(int user);
-    void delSeq();
+    void addSeq(int uid);
+    void delSeqBack();
+    void delSeqHead();
     void setTime(int t);
     vector<int> getSeq();
     int getTime();
     void clear();
     bool operator<(const SafeSeq &s2) const;
-
 };
 
 #endif // SAFESEQ_H

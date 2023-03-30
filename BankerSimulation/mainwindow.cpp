@@ -138,16 +138,21 @@ void MainWindow::randomButton()
     scheduler.setNum(ui->nSpinBox->value(), ui->mSpinBox->value());
     scheduler.initData(user, source);
     showInitData();
+    ui->safeSeqTable->setRowCount(0);
+    ui->safeSeqTable->clearContents();
+    ui->bankerButton->setEnabled(true);
 }
 
 void MainWindow::bankerButton()
 {
+    ui->bankerButton->setEnabled(false);
     scheduler.banker(user, source, safeSeqs);
     showSafeSeqs();
 }
 void MainWindow::safeSeqChoose(int row, int column)
 {
-    showInitData();
+    //中止模拟
+    stopSimulate();
     // 初始化模拟面板
     ui->mainProgressBar->setValue(0);
     ui->mainProgressBar->setMaximum(safeSeqs[row].getTime());
@@ -156,8 +161,8 @@ void MainWindow::safeSeqChoose(int row, int column)
     ui->simulateTable->setRowCount(n);
     ui->simulateTable->setColumnCount(2);
     // 设置每个客户的进度条
-    auto progressBars = this->findChildren<QProgressBar*>();
-    qDebug("%d",progressBars.size());
+    auto progressBars = this->findChildren<QProgressBar *>();
+    qDebug("%d", progressBars.size());
     for (int i = 0; i < n; i++)
     {
         QString name = QStringLiteral("U") + QString::number(i);
@@ -177,9 +182,10 @@ void MainWindow::safeSeqChoose(int row, int column)
 void MainWindow::simulateButton()
 {
     qDebug("simu");
+    // 禁用按钮
     ui->randomButton->setEnabled(false);
-    ui->bankerButton->setEnabled(false);
     ui->simulateButton->setEnabled(false);
+    //开始模拟
     scheduler.simulate(user, source, safeSeqs[chosenRow]);
 }
 void MainWindow::slot2()
@@ -202,6 +208,7 @@ void MainWindow::allocate(int uid)
         int allocationVal = allocation->text().toInt();
         auto work = ui->sourceTable->item(2, i);
         int workVal = work->text().toInt();
+        qDebug("need:%p\nitem:(%d,%d)", need, row, i + 1);
         need->setText(QString::number(0));
         allocation->setText(QString::number(needVal + allocationVal));
         work->setText(QString::number(workVal - needVal));
@@ -253,29 +260,26 @@ void MainWindow::timeStep(int t)
             runSet.erase(uid);
         }
     }
-    if (t == safeSeqs[chosenRow].getTime())
-    {
-        stopSimulate();
-    }
+    // if (t == safeSeqs[chosenRow].getTime())
+    // {
+    //     stopSimulate();
+    // }
 }
 
 void MainWindow::stopSimulateButton()
 {
-    qDebug("step1");
     stopSimulate();
-    qDebug("step2");
-    showInitData();
-    qDebug("step3");
     ui->simulateFrame->hide();
+    // 恢复按钮
+    ui->randomButton->setEnabled(true);
 }
 
 void MainWindow::stopSimulate()
 {
     // 发送信号
     emit stopSig();
+    showInitData();
     // 恢复按钮
-    ui->randomButton->setEnabled(true);
-    ui->bankerButton->setEnabled(true);
     ui->simulateButton->setEnabled(true);
     // 释放内存
     set<int>().swap(runSet);

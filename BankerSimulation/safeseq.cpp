@@ -5,13 +5,17 @@ SafeSeq::SafeSeq()
     time = 0;
 }
 
-void SafeSeq::addSeq(int user)
+void SafeSeq::addSeq(int uid)
 {
-    seq.push_back(user);
+    seq.push_back(uid);
 }
-void SafeSeq::delSeq()
+void SafeSeq::delSeqBack()
 {
     seq.pop_back();
+}
+void SafeSeq::delSeqHead()
+{
+    seq.erase(seq.begin());
 }
 
 void SafeSeq::setTime(int t)

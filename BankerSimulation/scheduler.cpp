@@ -6,8 +6,8 @@
 std::default_random_engine e(time(0));
 
 #define RANDOM_NEED e() % 5
-#define RANDOM_ALLOCATION e() % 5
-#define RANDOM_TIME e() % 6 + 2
+#define RANDOM_ALLOCATION e() % 4 + 1
+#define RANDOM_TIME e() % 4 + 2
 #define RANDOM_AVAILABLE e() % 7;
 
 Scheduler::Scheduler()
@@ -41,6 +41,7 @@ void Scheduler::initData(vector<User> &user, vector<Source> &source)
         {
             user[i].need.push_back(RANDOM_NEED);
             user[i].allocation.push_back(RANDOM_ALLOCATION);
+
             user[i].time.push_back(RANDOM_TIME);
         }
     }
@@ -138,7 +139,7 @@ void Scheduler::dfs(int uid, vector<SafeSeq> &safeSeqs)
         safeSeq.setTime((release.end() - 1)->time);
         safeSeqs.push_back(SafeSeq(safeSeq));
     }
-    else
+    else // 继续访问下一层
     {
         while (visitedUserSet.size() < n - lever)
         {
@@ -199,7 +200,7 @@ void Scheduler::simulate1Sec()
     // 静态变量
     static int time = 0;
     qDebug("time=%d", time);
-    static vector<int> seq = safeSeq.getSeq();
+    // static vector<int> seq = safeSeq.getSeq();
     // 出口
     if (time > safeSeq.getTime())
     {
@@ -207,7 +208,7 @@ void Scheduler::simulate1Sec()
         delete timer;
         time = 0;
         // 释放内存
-        vector<int>().swap(seq);
+        safeSeq.clear();
         vector<int>().swap(work);
         vector<Release>().swap(release);
         return;
@@ -222,8 +223,8 @@ void Scheduler::simulate1Sec()
         release.erase(r);
     }
     // 模拟该time下的分配过程
-    auto uidIt = seq.begin();
-    while (uidIt != seq.end() && isSatisfied(*uidIt))
+    auto uidIt = safeSeq.getSeq().begin();
+    while (uidIt != safeSeq.getSeq().end() && isSatisfied(*uidIt))
     {
         for (int i = 0; i < m; i++)
         {
@@ -236,8 +237,8 @@ void Scheduler::simulate1Sec()
             }
         }
         emit allocateSig(*uidIt);
-        seq.erase(uidIt);
-        uidIt = seq.begin();
+        safeSeq.delSeqHead();
+        uidIt = safeSeq.getSeq().begin();
     }
     time++;
 }

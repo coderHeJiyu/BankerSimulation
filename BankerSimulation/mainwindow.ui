@@ -359,6 +359,9 @@
              </item>
              <item>
               <widget class="QPushButton" name="bankerButton">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
                <property name="text">
                 <string>运行银行家算法</string>
                </property>
