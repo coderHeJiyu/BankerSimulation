@@ -41,7 +41,6 @@ void Scheduler::initData(vector<User> &user, vector<Source> &source)
         {
             user[i].need.push_back(RANDOM_NEED);
             user[i].allocation.push_back(RANDOM_ALLOCATION);
-
             user[i].time.push_back(RANDOM_TIME);
         }
     }
@@ -58,6 +57,52 @@ void Scheduler::initData(vector<User> &user, vector<Source> &source)
         int total = cnt + available;
         source.push_back(Source(total, available));
     }
+
+    // debug1
+    // vector<User>().swap(user);
+    // vector<Source>().swap(source);
+    // for (int i = 0; i < 3; i++)
+    // {
+    //     user.push_back(User());
+    // }
+    // user[0].need.push_back(0);
+    // user[0].allocation.push_back(1);
+    // user[0].time.push_back(3);
+    // user[1].need.push_back(0);
+    // user[1].allocation.push_back(4);
+    // user[1].time.push_back(4);
+    // user[2].need.push_back(3);
+    // user[2].allocation.push_back(2);
+    // user[2].time.push_back(2);
+    // source.push_back(Source(13, 6));
+
+    // debug2
+    // vector<User>().swap(user);
+    // vector<Source>().swap(source);
+    // for (int i = 0; i < 3; i++)
+    // {
+    //     user.push_back(User());
+    // }
+    // user[0].need.push_back(1);
+    // user[0].allocation.push_back(4);
+    // user[0].time.push_back(4);
+    // user[0].need.push_back(3);
+    // user[0].allocation.push_back(3);
+    // user[0].time.push_back(3);
+    // user[1].need.push_back(4);
+    // user[1].allocation.push_back(1);
+    // user[1].time.push_back(4);
+    // user[1].need.push_back(2);
+    // user[1].allocation.push_back(1);
+    // user[1].time.push_back(4);
+    // user[2].need.push_back(0);
+    // user[2].allocation.push_back(1);
+    // user[2].time.push_back(2);
+    // user[2].need.push_back(1);
+    // user[2].allocation.push_back(4);
+    // user[2].time.push_back(4);
+    // source.push_back(Source(7, 1));
+    // source.push_back(Source(9, 1));
 }
 
 void Scheduler::banker(vector<User> user, vector<Source> source, vector<SafeSeq> &safeSeqs)
@@ -108,6 +153,7 @@ void Scheduler::simulate(vector<User> user, vector<Source> source, SafeSeq safeS
     this->safeSeq = safeSeq;
     timer = new QTimer(this);
     connect(timer, SIGNAL(timeout()), this, SLOT(simulate1Sec()));
+    simulate1Sec();
     timer->start(1000);
     // 开始模拟
 }
@@ -199,8 +245,6 @@ void Scheduler::simulate1Sec()
 {
     // 静态变量
     static int time = 0;
-    qDebug("time=%d", time);
-    // static vector<int> seq = safeSeq.getSeq();
     // 出口
     if (time > safeSeq.getTime())
     {
@@ -211,15 +255,24 @@ void Scheduler::simulate1Sec()
         safeSeq.clear();
         vector<int>().swap(work);
         vector<Release>().swap(release);
+        set<int>().swap(runSet);
         return;
     }
     // 发送时钟信号
-    emit clockSig(time);
+    if (time > 0)
+    {
+        emit progressSig(-1);
+        for (auto &&i : runSet)
+        {
+            emit progressSig(i);
+        }
+    }
     // 模拟该time下的释放过程
     while (release.begin() != release.end() && release.begin()->time == time)
     {
         auto r = release.begin();
         work[r->sourceId] += r->number;
+        emit releaseSig(r->uid, r->sourceId);
         release.erase(r);
     }
     // 模拟该time下的分配过程
@@ -233,9 +286,11 @@ void Scheduler::simulate1Sec()
             if (number > 0)
             {
                 Release r(i, number, user[*uidIt].time[i] + time);
+                r.uid = *uidIt;
                 release.insert(std::upper_bound(release.begin(), release.end(), r), r);
             }
         }
+        runSet.insert(*uidIt);
         emit allocateSig(*uidIt);
         safeSeq.delSeqHead();
         uidIt = safeSeq.getSeq().begin();

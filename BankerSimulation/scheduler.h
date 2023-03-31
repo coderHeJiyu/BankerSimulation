@@ -20,9 +20,10 @@ private:
     vector<int> work;        // 工作向量
     vector<Release> release; // 待释放的资源
     vector<bool> finished;   // 完成状态向量
-    vector<User> user;
-    vector<Source> source;
-    SafeSeq safeSeq; // 安全序列
+    vector<User> user;       // 客户数组
+    vector<Source> source;   // 资源数组
+    SafeSeq safeSeq;         // 安全序列
+    set<int> runSet;         // 运行集合
     QTimer *timer;
     void dfs(int uid, vector<SafeSeq> &safeSeqs); // 深度优先遍历解空间
     bool isSatisfied(int uid);
@@ -56,7 +57,8 @@ public:
 signals:
     void mysig();
     void allocateSig(int);
-    void clockSig(int);
+    void releaseSig(int, int);
+    void progressSig(int);
 private slots:
     void simulate1Sec();
 public slots:

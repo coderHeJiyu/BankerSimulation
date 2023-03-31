@@ -15,7 +15,8 @@ MainWindow::MainWindow(QWidget *parent)
     // 设置信号与槽
     connect(&scheduler, SIGNAL(mysig()), this, SLOT(slot2()));
     connect(&scheduler, SIGNAL(allocateSig(int)), this, SLOT(allocate(int)));
-    connect(&scheduler, SIGNAL(clockSig(int)), this, SLOT(timeStep(int)));
+    connect(&scheduler, SIGNAL(releaseSig(int, int)), this, SLOT(release(int, int)));
+    connect(&scheduler, SIGNAL(progressSig(int)), this, SLOT(updateProgress(int)));
     connect(this, SIGNAL(stopSig()), &scheduler, SLOT(stopSimulate()));
 }
 
@@ -135,7 +136,9 @@ void MainWindow::showSafeSeqs()
 
 void MainWindow::randomButton()
 {
-    scheduler.setNum(ui->nSpinBox->value(), ui->mSpinBox->value());
+    n = ui->nSpinBox->value();
+    m = ui->mSpinBox->value();
+    scheduler.setNum(n, m);
     scheduler.initData(user, source);
     showInitData();
     ui->safeSeqTable->setRowCount(0);
@@ -149,9 +152,10 @@ void MainWindow::bankerButton()
     scheduler.banker(user, source, safeSeqs);
     showSafeSeqs();
 }
+
 void MainWindow::safeSeqChoose(int row, int column)
 {
-    //中止模拟
+    // 中止模拟
     stopSimulate();
     // 初始化模拟面板
     ui->mainProgressBar->setValue(0);
@@ -162,7 +166,6 @@ void MainWindow::safeSeqChoose(int row, int column)
     ui->simulateTable->setColumnCount(2);
     // 设置每个客户的进度条
     auto progressBars = this->findChildren<QProgressBar *>();
-    qDebug("%d", progressBars.size());
     for (int i = 0; i < n; i++)
     {
         QString name = QStringLiteral("U") + QString::number(i);
@@ -181,13 +184,13 @@ void MainWindow::safeSeqChoose(int row, int column)
 
 void MainWindow::simulateButton()
 {
-    qDebug("simu");
     // 禁用按钮
     ui->randomButton->setEnabled(false);
     ui->simulateButton->setEnabled(false);
-    //开始模拟
+    // 开始模拟
     scheduler.simulate(user, source, safeSeqs[chosenRow]);
 }
+
 void MainWindow::slot2()
 {
     std::cout << "slot2";
@@ -195,8 +198,6 @@ void MainWindow::slot2()
 
 void MainWindow::allocate(int uid)
 {
-    qDebug("all");
-    runSet.insert(uid);
     int m = source.size();
     auto table = ui->userTable;
     int row = uid + 2;
@@ -208,62 +209,56 @@ void MainWindow::allocate(int uid)
         int allocationVal = allocation->text().toInt();
         auto work = ui->sourceTable->item(2, i);
         int workVal = work->text().toInt();
-        qDebug("need:%p\nitem:(%d,%d)", need, row, i + 1);
         need->setText(QString::number(0));
         allocation->setText(QString::number(needVal + allocationVal));
         work->setText(QString::number(workVal - needVal));
     }
 }
 
-void MainWindow::timeStep(int t)
+void MainWindow::release(int uid, int sourceId)
 {
-    // 更新主进度条
-    ui->mainProgressBar->setValue(t);
-    int m = source.size();
-    // 更新资源表、客户表和客户进度条
-    for (auto &&uid : runSet)
+    qDebug("release uid(%d) sourceId(%d)",uid,sourceId);
+    int row = uid + 2;
+    // 释放资源，修改资源表和客户allocation表
+    auto allocation = ui->userTable->item(row, m + sourceId + 1);
+    int allocationVal = allocation->text().toInt();
+    auto work = ui->sourceTable->item(2, sourceId);
+    int workVal = work->text().toInt();
+    allocation->setText(QString::number(0));
+    work->setText(QString::number(workVal + allocationVal));
+}
+
+void MainWindow::updateProgress(int uid)
+{
+    qDebug("MainWindow::updateProgress(%d)",uid);
+    if (uid == -1)
     {
+        // 更新主进度条
+        auto progressBar = ui->mainProgressBar;
+        if (!progressBar->isMaximized())
+        {
+            progressBar->setValue(progressBar->value() + 1);
+        }
+    }
+    else
+    {
+        // 更新客户进度条
+        QString name = QStringLiteral("U") + QString::number(uid);
+        auto progressBar = this->findChild<QProgressBar *>(name);
+        if (!progressBar->isMaximized())
+        {
+            progressBar->setValue(progressBar->value() + 1);
+        }
+        // 修改客户表time栏
         int row = uid + 2;
-        int endFlag = true;
         for (int i = 0; i < m; i++)
         {
-            // 修改客户表time栏
             auto time = ui->userTable->item(row, 2 * m + i + 1);
             int timeVal = time->text().toInt();
             timeVal = std::max(timeVal - 1, 0);
             time->setText(QString::number(timeVal));
-
-            if (timeVal == 0)
-            {
-                // 释放资源，修改资源表和客户allocation表
-                auto allocation = ui->userTable->item(row, m + i + 1);
-                int allocationVal = allocation->text().toInt();
-                auto work = ui->sourceTable->item(2, i);
-                int workVal = work->text().toInt();
-                allocation->setText(QString::number(0));
-                work->setText(QString::number(workVal + allocationVal));
-            }
-            else
-            {
-                // 客户进程没有结束
-                endFlag = false;
-            }
-        }
-        // 更新客户进度条
-        // auto cellWidget = ui->simulateTable->cellWidget(uid, 1);
-        QString name = QStringLiteral("U") + QString::number(uid);
-        auto progressBar = this->findChild<QProgressBar *>(name);
-        // qDebug("pbsize:%d",progressBar.size());
-        progressBar->setValue(progressBar->value() + 1);
-        if (endFlag)
-        {
-            runSet.erase(uid);
         }
     }
-    // if (t == safeSeqs[chosenRow].getTime())
-    // {
-    //     stopSimulate();
-    // }
 }
 
 void MainWindow::stopSimulateButton()
@@ -281,6 +276,4 @@ void MainWindow::stopSimulate()
     showInitData();
     // 恢复按钮
     ui->simulateButton->setEnabled(true);
-    // 释放内存
-    set<int>().swap(runSet);
 }

@@ -21,12 +21,13 @@ public:
     ~MainWindow();
 
 private:
+    int n;                   // 客户个数
+    int m;                   // 资源类数
     Scheduler scheduler;
     vector<User> user;
     vector<Source> source;
     vector<SafeSeq> safeSeqs;
     int chosenRow;
-    set<int> runSet;
     Ui::MainWindow *ui;
     /// @brief 显示初始化数据
     void showInitData();
@@ -44,7 +45,8 @@ private slots:
 public slots:
     void slot2();
     void allocate(int);
-    void timeStep(int);
+    void release(int,int);
+    void updateProgress(int);
     
 signals:
     void stopSig();
