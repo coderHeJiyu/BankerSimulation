@@ -1,5 +1,4 @@
 #include "scheduler.h"
-#include <iostream>
 #include <ctime>
 #include <random>
 #include <algorithm>
@@ -153,9 +152,10 @@ void Scheduler::simulate(vector<User> user, vector<Source> source, SafeSeq safeS
     this->safeSeq = safeSeq;
     timer = new QTimer(this);
     connect(timer, SIGNAL(timeout()), this, SLOT(simulate1Sec()));
+    // 开始模拟
+    runTime = 0;
     simulate1Sec();
     timer->start(1000);
-    // 开始模拟
 }
 
 void Scheduler::dfs(int uid, vector<SafeSeq> &safeSeqs)
@@ -243,14 +243,11 @@ bool Scheduler::isSatisfied(int uid)
 
 void Scheduler::simulate1Sec()
 {
-    // 静态变量
-    static int time = 0;
     // 出口
-    if (time > safeSeq.getTime())
+    if (runTime > safeSeq.getTime())
     {
         timer->stop();
         delete timer;
-        time = 0;
         // 释放内存
         safeSeq.clear();
         vector<int>().swap(work);
@@ -259,7 +256,7 @@ void Scheduler::simulate1Sec()
         return;
     }
     // 发送时钟信号
-    if (time > 0)
+    if (runTime > 0)
     {
         emit progressSig(-1);
         for (auto &&i : runSet)
@@ -267,15 +264,15 @@ void Scheduler::simulate1Sec()
             emit progressSig(i);
         }
     }
-    // 模拟该time下的释放过程
-    while (release.begin() != release.end() && release.begin()->time == time)
+    // 模拟该runTime下的释放过程
+    while (release.begin() != release.end() && release.begin()->time == runTime)
     {
         auto r = release.begin();
         work[r->sourceId] += r->number;
         emit releaseSig(r->uid, r->sourceId);
         release.erase(r);
     }
-    // 模拟该time下的分配过程
+    // 模拟该runTime下的分配过程
     auto uidIt = safeSeq.getSeq().begin();
     while (uidIt != safeSeq.getSeq().end() && isSatisfied(*uidIt))
     {
@@ -285,7 +282,7 @@ void Scheduler::simulate1Sec()
             int number = user[*uidIt].allocation[i] + user[*uidIt].need[i];
             if (number > 0)
             {
-                Release r(i, number, user[*uidIt].time[i] + time);
+                Release r(i, number, user[*uidIt].time[i] + runTime);
                 r.uid = *uidIt;
                 release.insert(std::upper_bound(release.begin(), release.end(), r), r);
             }
@@ -295,12 +292,11 @@ void Scheduler::simulate1Sec()
         safeSeq.delSeqHead();
         uidIt = safeSeq.getSeq().begin();
     }
-    time++;
+    runTime++;
 }
 
 void Scheduler::stopSimulate()
 {
     // 重置simulate1Sec()
-    qDebug("Scheduler::stopSimulate()");
     safeSeq.setTime(-1);
 }

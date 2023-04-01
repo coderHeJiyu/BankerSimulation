@@ -13,7 +13,6 @@ MainWindow::MainWindow(QWidget *parent)
     // 设置模拟面板
     ui->simulateFrame->hide();
     // 设置信号与槽
-    connect(&scheduler, SIGNAL(mysig()), this, SLOT(slot2()));
     connect(&scheduler, SIGNAL(allocateSig(int)), this, SLOT(allocate(int)));
     connect(&scheduler, SIGNAL(releaseSig(int, int)), this, SLOT(release(int, int)));
     connect(&scheduler, SIGNAL(progressSig(int)), this, SLOT(updateProgress(int)));
@@ -27,8 +26,6 @@ MainWindow::~MainWindow()
 
 void MainWindow::showInitData()
 {
-    int n = user.size();
-    int m = source.size();
     // 显示资源表
     auto table = ui->sourceTable;
     table->clearContents();
@@ -161,10 +158,11 @@ void MainWindow::safeSeqChoose(int row, int column)
     ui->mainProgressBar->setValue(0);
     ui->mainProgressBar->setMaximum(safeSeqs[row].getTime());
     // 初始化模拟表
-    int n = user.size();
     ui->simulateTable->setRowCount(n);
     ui->simulateTable->setColumnCount(2);
     // 设置每个客户的进度条
+    ui->simulateTable->setColumnWidth(0, 24);
+    ui->simulateTable->setColumnWidth(1, 300);
     auto progressBars = this->findChildren<QProgressBar *>();
     for (int i = 0; i < n; i++)
     {
@@ -191,14 +189,8 @@ void MainWindow::simulateButton()
     scheduler.simulate(user, source, safeSeqs[chosenRow]);
 }
 
-void MainWindow::slot2()
-{
-    std::cout << "slot2";
-}
-
 void MainWindow::allocate(int uid)
 {
-    int m = source.size();
     auto table = ui->userTable;
     int row = uid + 2;
     for (int i = 0; i < m; i++)
@@ -217,7 +209,6 @@ void MainWindow::allocate(int uid)
 
 void MainWindow::release(int uid, int sourceId)
 {
-    qDebug("release uid(%d) sourceId(%d)",uid,sourceId);
     int row = uid + 2;
     // 释放资源，修改资源表和客户allocation表
     auto allocation = ui->userTable->item(row, m + sourceId + 1);
@@ -230,7 +221,6 @@ void MainWindow::release(int uid, int sourceId)
 
 void MainWindow::updateProgress(int uid)
 {
-    qDebug("MainWindow::updateProgress(%d)",uid);
     if (uid == -1)
     {
         // 更新主进度条

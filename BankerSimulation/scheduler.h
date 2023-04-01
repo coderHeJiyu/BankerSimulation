@@ -24,7 +24,9 @@ private:
     vector<Source> source;   // 资源数组
     SafeSeq safeSeq;         // 安全序列
     set<int> runSet;         // 运行集合
-    QTimer *timer;
+    QTimer *timer;           // 计时器
+    int runTime;             // 运行时间
+
     void dfs(int uid, vector<SafeSeq> &safeSeqs); // 深度优先遍历解空间
     bool isSatisfied(int uid);
 
@@ -55,7 +57,6 @@ public:
     void simulate(vector<User> user, vector<Source> source, SafeSeq safeSeqs);
 
 signals:
-    void mysig();
     void allocateSig(int);
     void releaseSig(int, int);
     void progressSig(int);
